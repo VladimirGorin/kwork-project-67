@@ -3,7 +3,9 @@ from telethon.errors import SessionPasswordNeededError
 from telethon.tl.functions.account import GetAuthorizationsRequest
 from config import API_ID, API_HASH
 import os
-import json, asyncio
+import json
+import asyncio
+import socks, sys
 
 # Путь к файлам с номерами телефонов и прокси
 SESSIONS_FILE = 'sessions.txt'
@@ -18,8 +20,22 @@ if not os.path.exists(SESSIONS_DIR):
 def load_proxy():
     with open(PROXY_FILE, 'r') as f:
         proxy_line = f.readline().strip()
-        host, port, secret = proxy_line.split(":")
-        return (host, int(port), secret)
+        proxy_data = proxy_line.split(":")
+        proxy_type = proxy_data[0]
+
+        if proxy_type == "proxy.mtproto.ru":
+            host, port, secret = proxy_data
+            return {"type": "MTPROTO", "connection_cortege": (host, int(port), secret), "connection": connection.ConnectionTcpMTProxyRandomizedIntermediate}
+
+        elif proxy_type == "http":
+            proxy_type, host, port, user, password = proxy_data
+            return {"type": "HTTP",  "connection_cortege": (socks.HTTP, host, int(port), True, user, password)}
+
+        elif proxy_type == "socks5":
+            proxy_type, host, port, user, password = proxy_data
+            return {"type": "SOCKS5",  "connection_cortege": (socks.SOCKS5, host, int(port), True, user, password)}
+
+        return {"type": "ERROR"}
 
 
 def load_phones():
@@ -27,15 +43,18 @@ def load_phones():
         return [phone.strip() for phone in f.readlines()]
 
 
-def save_session(phone, two_fa):
+def save_session(phone, two_fa, proxy):
     session_file_json = os.path.join(SESSIONS_DIR, f'{phone}.json')
     session_data = {
         'app_id': int(API_ID),
         'app_hash': API_HASH,
-        'two_fa': two_fa
+        'two_fa': two_fa,
+        'proxy': proxy
     }
+
     with open(session_file_json, 'w') as f:
         json.dump(session_data, f, indent=4)
+
 
 def phone_validation(phone):
     phone = phone.replace("+", "")
@@ -43,13 +62,18 @@ def phone_validation(phone):
 
     return phone
 
-async def create_session(phone, mtproto, mtproto_connection):
+
+async def create_session(phone, proxy):
     print(f"Работаем с {phone}...")
 
     phone = phone_validation(phone=phone)
 
-    client = TelegramClient(os.path.join(
-        SESSIONS_DIR, phone), API_ID, API_HASH, proxy=mtproto,connection=mtproto_connection)
+    if (proxy.get("type") == "MTPROTO"):
+        client = TelegramClient(os.path.join(
+            SESSIONS_DIR, phone), API_ID, API_HASH, proxy=proxy.get("connection_cortege"), connection=proxy.get("connection"))
+    else:
+        client = TelegramClient(os.path.join(
+            SESSIONS_DIR, phone), API_ID, API_HASH, proxy=proxy.get("connection_cortege"))
 
     await client.start(phone)
 
@@ -72,7 +96,7 @@ async def create_session(phone, mtproto, mtproto_connection):
             two_fa = None
 
         print(f"Сессия для {phone} успешно создана!")
-        save_session(phone, two_fa)
+        save_session(phone, two_fa, proxy.get("connection_cortege"))
 
     except Exception as e:
         print(f"Ошибка при создании сессии для {phone}: {e}")
@@ -84,11 +108,13 @@ async def create_session(phone, mtproto, mtproto_connection):
 async def main():
     phones = load_phones()
 
-    mtproto = load_proxy()
-    mtproto_connection = connection.ConnectionTcpMTProxyRandomizedIntermediate
+    proxy = load_proxy()
+    if (proxy.get("type") == "ERROR"):
+        print("Ошибка, прокси не корректны")
+        sys.exit(1)
 
     for phone in phones:
-        await create_session(phone, mtproto, mtproto_connection)
+        await create_session(phone, proxy)
 
 if __name__ == "__main__":
     asyncio.run(main())

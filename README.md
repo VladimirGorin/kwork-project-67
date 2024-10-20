@@ -9,7 +9,7 @@ pip install -r requirements.txt
 ```
 
 ## Настройка
-Укажите прокси (MTPORTO) в файле `proxy.txt`
+Укажите прокси (MTPORTO, SOCKS5, HTTP) в файле `proxy.txt`
 Укажите номера телефонов для авторизации, где каждая новая строка новый номер в файле `sessions.txt`
 
 ## Запуск и результат
