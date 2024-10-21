@@ -43,13 +43,14 @@ def load_phones():
         return [phone.strip() for phone in f.readlines()]
 
 
-def save_session(phone, two_fa, proxy):
+def save_session(phone, two_fa, proxy, proxy_type):
     session_file_json = os.path.join(SESSIONS_DIR, f'{phone}.json')
     session_data = {
         'app_id': int(API_ID),
         'app_hash': API_HASH,
         'two_fa': two_fa,
-        'proxy': proxy
+        'proxy': proxy,
+        'proxy_type': proxy_type
     }
 
     with open(session_file_json, 'w') as f:
@@ -96,7 +97,7 @@ async def create_session(phone, proxy):
             two_fa = None
 
         print(f"Сессия для {phone} успешно создана!")
-        save_session(phone, two_fa, proxy.get("connection_cortege"))
+        save_session(phone, two_fa, proxy.get("connection_cortege"), proxy.get("type"))
 
     except Exception as e:
         print(f"Ошибка при создании сессии для {phone}: {e}")

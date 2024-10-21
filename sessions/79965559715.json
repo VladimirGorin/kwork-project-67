@@ -3,11 +3,9 @@
     "app_hash": "b18441a1ff607e10a989891a5462e627",
     "two_fa": null,
     "proxy": [
-        2,
-        "45.131.47.18",
-        64137,
-        true,
-        "abSbiWss",
-        "VHMKs1Xd"
-    ]
+        "proxy.mtproto.ru",
+        443,
+        "dd11112222333344445555666677778888"
+    ],
+    "proxy_type": "MTPROTO"
 }
